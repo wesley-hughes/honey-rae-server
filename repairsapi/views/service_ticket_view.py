@@ -24,6 +24,10 @@ class ServiceTicketView(ViewSet):
             if "status" in request.query_params:
                 if request.query_params['status'] == "done":
                     service_tickets = service_tickets.filter(date_completed__isnull=False)
+                if request.query_params['status'] == "unclaimed":
+                    service_tickets = service_tickets.filter(employee__isnull=True)
+                if request.query_params['status'] == "inprogress":
+                    service_tickets = service_tickets.filter(date_completed__isnull=True, employee__isnull=False)
 
         else:
             service_tickets = ServiceTicket.objects.filter(customer__user=request.auth.user)
@@ -68,9 +72,10 @@ class ServiceTicketView(ViewSet):
     def update(self, request, pk=None):
         '''handle put requests'''
         ticket = ServiceTicket.objects.get(pk=pk)
-        employee_id = request.data['employee']
+        employee_id = request.data['employee']['id']
         assigned_employee = Employee.objects.get(pk=employee_id)
         ticket.employee = assigned_employee
+        ticket.date_completed = request.data['date_completed']
         ticket.save()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -90,4 +95,4 @@ class ServiceTicketSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceTicket
         fields = ('id', 'customer', 'employee', 'description', 'emergency', 'date_completed')
-        depth = 1
+        depth= 1
